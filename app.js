@@ -1,12 +1,16 @@
 const express = require("express");
-const morgan = require("morgan");
+const logger = require("morgan");
 const cors = require("cors");
+
+require("dotenv").config();
 
 const contactsRouter = require("./routes/contactsRouter");
 
 const app = express();
 
-app.use(morgan("tiny"));
+const formatsLogger = app.get("env") === "development" ? "dev" : "short";
+
+app.use(logger("formatsLogger"));
 app.use(cors());
 app.use(express.json());
 
@@ -21,6 +25,4 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message });
 });
 
-app.listen(3000, () => {
-  console.log("Server is running. Use our API on port: 3000");
-});
+module.exports = app;
