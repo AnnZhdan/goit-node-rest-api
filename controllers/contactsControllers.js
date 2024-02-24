@@ -13,7 +13,19 @@ const {
 
 const getAllContacts = async (req, res, next) => {
   try {
-    const result = await Contact.find();
+    const { _id: owner } = req.user;
+    const { page = 1, limit = 10, favorite } = req.query;
+    const skip = (page - 1) * limit;
+
+    const favoriteFilter = { owner };
+    if (favorite) {
+      favoriteFilter.favorite = favorite;
+    }
+
+    const result = await Contact.find(favoriteFilter, "-createdAt -updatedAt", {
+      skip,
+      limit,
+    }).populate("owner", "email");
     res.json(result);
   } catch (error) {
     next(error);
@@ -22,8 +34,10 @@ const getAllContacts = async (req, res, next) => {
 
 const getOneContact = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const result = await Contact.findById(id);
+    const { id: _id } = req.params;
+    const { _id: owner } = req.user;
+
+    const result = await Contact.findOne({ _id, owner });
     if (!result) {
       throw HttpError(404);
     }
@@ -35,8 +49,10 @@ const getOneContact = async (req, res, next) => {
 
 const deleteContact = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const result = await Contact.findByIdAndDelete(id);
+    const { id: _id } = req.params;
+    const { _id: owner } = req.user;
+
+    const result = await Contact.findOneAndDelete({ _id, owner });
     if (!result) {
       throw HttpError(404);
     }
@@ -52,7 +68,9 @@ const createContact = async (req, res, next) => {
     if (error) {
       throw HttpError(400, error.message);
     }
-    const result = await Contact.create(req.body);
+
+    const { _id: owner } = req.user;
+    const result = await Contact.create({ ...req.body, owner });
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -71,12 +89,15 @@ const updateContact = async (req, res, next) => {
       throw HttpError(400, error.message);
     }
 
-    const { id } = req.params;
-    const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+    const { id: _id } = req.params;
+    const { _id: owner } = req.user;
+    const result = await Contact.findOneAndUpdate({ _id, owner }, req.body, {
+      new: true,
+    });
     if (!result) {
       throw HttpError(404);
     }
-    res.json(result);
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -84,8 +105,6 @@ const updateContact = async (req, res, next) => {
 
 const updateStatusFavorite = async (req, res, next) => {
   try {
-    const { id } = req.params;
-
     if (!req.body.hasOwnProperty("favorite")) {
       throw HttpError(400, "missing field favorite");
     }
@@ -95,7 +114,12 @@ const updateStatusFavorite = async (req, res, next) => {
       throw HttpError(400, error.message);
     }
 
-    const result = await updateStatusContact(id, req.body);
+    const { id: _id } = req.params;
+    const { _id: owner } = req.user;
+
+    const result = await Contact.findOneAndUpdate({ _id, owner }, req.body, {
+      new: true,
+    });
 
     if (!result) {
       throw HttpError(404);
