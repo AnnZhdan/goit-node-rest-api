@@ -26,9 +26,9 @@ const contactSchema = Schema(
 
 const Contact = model("contact", contactSchema);
 
-async function updateStatusContact(id, body) {
-  const updatedStatus = await Contact.findByIdAndUpdate(
-    id,
+async function updateStatusContact(conditions, body) {
+  const updatedStatus = await Contact.findByOneUpdate(
+    conditions,
     { $set: body },
     { new: true }
   );
